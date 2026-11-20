@@ -36,7 +36,15 @@ Works best in the **Claude desktop app** (Code tab), where Clawd opens as a smal
 
 ## How it works
 
-`hooks/register.tsx` listens to Claude Code's hooks (`turn.start`, `tool.call`, `turn.complete`) and picks a clip; a timer steps through the frames in `frames/<clip>/` (WebP, 320×256, transparent) and draws them in a pane. `sounds/` holds the pop and the idea ding.
+`hooks/register.tsx` (readable TypeScript, no build step) listens to Claude Code's hooks (`turn.start`, `tool.call`, `turn.complete`) and picks a clip; a timer steps through the frames and draws them in a pane. The frames are WebP images (320×256, transparent) stored as base64 in `data/<clip>-<n>.json`, eight to a file; `data/sounds.json` holds the pop and the idea ding as MP3.
+
+## What it does on your machine
+
+- **Reads:** only its own `data/` files.
+- **Watches:** the names of the tools Claude calls, and the file name an edit or read is about, to pick the clip and write the caption. Nothing about your code or prompts is kept.
+- **Stores:** one on/off flag (`/clawd off`), in Claude Code's own plugin storage.
+- **Network:** none. It sends nothing anywhere and fetches nothing.
+- **Permissions:** it never changes Claude's permission settings and never blocks or rewrites a tool call.
 
 Made by War. Unofficial fan project; not made by or affiliated with Anthropic.
 

@@ -4,7 +4,8 @@ import type { EngineInterface, Register, Timer } from 'claude-code'
 import type { Anim } from '../types'
 
 // Clawdmation: a claymation Clawd popup. Frames are rendered in Blender,
-// 12 fps "on twos", shipped as WebP under ../frames/<clip>/NNN.webp.
+// 12 fps "on twos", shipped as base64 WebP in ../data/<clip>-<k>.json (8 frames a file).
+// The mod reads only its own data files: no network, nothing sent anywhere.
 
 const PANE = 'clawd'
 const FPS_MS = 83
@@ -48,31 +49,34 @@ const S: {
   held: number
   enabled: boolean
   cache: Map<string, string>
-} = { want: 'think', wantCaption: '', queue: [], closing: false, timer: undefined, held: 0, enabled: true, cache: new Map() }
+  sounds: Record<string, { base64: string; mime: string }> | undefined
+} = { want: 'think', wantCaption: '', queue: [], closing: false, timer: undefined, held: 0, enabled: true, cache: new Map(), sounds: undefined }
 
-// Set to true to write hooks/../debug.log (what Clawd showed and when) while developing.
-const DEBUG = false
+// a short in-memory trace of what Clawd showed (handy when debugging the mod)
 const LOG: string[] = []
 let renders = 0
 function note($: EngineInterface, line: string): void {
   LOG.push(`${new Date().toISOString().slice(11, 19)} ${line}`)
   if (LOG.length > 200) LOG.splice(0, LOG.length - 200)
-  if (!DEBUG) return
-  $.fs.write(`${$.plugin.root}/debug.log`, LOG.join('\n') + '\n').catch(() => {})
 }
 
 function baseName(p: unknown): string {
   return typeof p === 'string' ? (p.split(/[\\/]/).pop() ?? '') : ''
 }
 
+const CHUNK = 8
+
 async function loadFrame($: EngineInterface, clip: string, i: number): Promise<string> {
   const key = `${clip}/${i}`
   const hit = S.cache.get(key)
   if (hit) return hit
-  const path = `${$.plugin.root}/frames/${clip}/${String(i).padStart(3, '0')}.webp`
-  const { base64 } = await $.fs.read(path, { as: 'bytes' })
-  S.cache.set(key, base64)
-  return base64
+  const k = Math.floor(i / CHUNK)
+  const text = await $.fs.read(`${$.plugin.root}/data/${clip}-${k}.json`)
+  const chunk = JSON.parse(text) as { first: number; frames: string[] }
+  chunk.frames.forEach((b64, j) => S.cache.set(`${clip}/${chunk.first + j}`, b64))
+  const got = S.cache.get(key)
+  if (!got) throw new Error(`no frame ${key}`)
+  return got
 }
 
 async function preload($: EngineInterface, clip: string): Promise<void> {
@@ -86,8 +90,14 @@ async function preload($: EngineInterface, clip: string): Promise<void> {
   }
 }
 
-function playSound($: EngineInterface, name: string): void {
-  $.audio.play({ asset: `sounds/${name}.wav` }).catch(() => {})
+async function playSound($: EngineInterface, name: string): Promise<void> {
+  try {
+    if (!S.sounds) S.sounds = JSON.parse(await $.fs.read(`${$.plugin.root}/data/sounds.json`))
+    const clip = S.sounds?.[name]
+    if (clip) await $.audio.play({ base64: clip.base64, mime: clip.mime })
+  } catch {
+    // no sound is fine
+  }
 }
 
 async function switchTo($: EngineInterface, clip: string, caption: string): Promise<void> {
@@ -115,8 +125,8 @@ async function tick($: EngineInterface): Promise<void> {
   }
   // one-shot clip: play it through, hold the last drawing a moment
   if (n < spec.frames) {
-    if (cur.clip === 'pop' && n === 19) playSound($, 'pop')
-    if (cur.clip === 'idea' && n === 8) playSound($, 'ding')
+    if (cur.clip === 'pop' && n === 19) void playSound($, 'pop')
+    if (cur.clip === 'idea' && n === 8) void playSound($, 'ding')
     S.held = 0
     await update($, anim, a => ({ ...a, frame: n }))
     return
@@ -298,12 +308,8 @@ export const register: Register = on => {
     if (e.surface === 'desktop' || e.surface === 'mobile' || e.surface === 'vscode') {
       const { Box, Text, Svg } = $.ui.resolve(e)
       const w = e.props.placement === 'widget' ? 200 : 320
-      let source = '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="256"><circle cx="160" cy="150" r="70" fill="#D97757"/></svg>'
-      try {
-        source = await $.fs.read(`${$.plugin.root}/frames/${a.clip}/${String(a.frame).padStart(3, '0')}.svg`)
-      } catch {
-        // keep the plain blob
-      }
+      const bob = Math.round(Math.sin(a.frame / 2) * 6)
+      const source = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="256" viewBox="0 0 320 256"><ellipse cx="160" cy="${150 + bob}" rx="78" ry="62" fill="#D97757"/><circle cx="135" cy="${135 + bob}" r="11" fill="#1a1a1a"/><circle cx="185" cy="${135 + bob}" r="11" fill="#1a1a1a"/></svg>`
       return (
         <Box flexDirection="column" alignItems="center">
           <Svg source={source} alt={`Clawd: ${caption}`} width={w} height={Math.round((w * 256) / 320)} />

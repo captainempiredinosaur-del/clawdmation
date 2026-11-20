@@ -1,8 +1,20 @@
 {
   "name": "clawdmation",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Claymation Clawd: a little clay crab pops up in Claude Code and acts out what Claude is doing. It thinks, types, gets angry at errors, gets ideas, gives a thumbs up, then inflates and pops.",
-  "author": { "name": "War" },
-  "keywords": ["clawd", "claymation", "mascot", "animation", "fun", "status"],
-  "types": "./types/index.d.ts"
+  "author": {
+    "name": "War"
+  },
+  "keywords": [
+    "clawd",
+    "claymation",
+    "mascot",
+    "animation",
+    "fun",
+    "status"
+  ],
+  "types": "./types/index.d.ts",
+  "license": "MIT",
+  "homepage": "https://github.com/captainempiredinosaur-del/clawdmation",
+  "repository": "https://github.com/captainempiredinosaur-del/clawdmation"
 }
