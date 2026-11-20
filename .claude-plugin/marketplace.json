@@ -1,0 +1,14 @@
+{
+  "name": "clawdmation",
+  "owner": {
+    "name": "War"
+  },
+  "plugins": [
+    {
+      "name": "clawdmation",
+      "source": "./",
+      "description": "Claymation Clawd popup that acts out what Claude is doing."
+    }
+  ],
+  "description": "Clawdmation: a claymation Clawd that acts out what Claude Code is doing."
+}
