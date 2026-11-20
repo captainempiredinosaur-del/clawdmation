@@ -1,5 +1,7 @@
 # Clawdmation
 
+<p align="center"><img src="media/clawdmation-demo.gif" alt="Clawdmation: Clawd thinking, typing, getting angry, getting an idea, giving a thumbs up and popping" width="400"></p>
+
 **Claymation Clawd for Claude Code.** A little modeling-clay crab pops up beside your chat and acts out what Claude is doing, one squishy stop-motion frame at a time.
 
 | Claude is… | Clawd… |
